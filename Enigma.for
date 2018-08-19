@@ -9,7 +9,7 @@ C       - SUPPORTS FILES UP TO 5242880 BYTES (5MB)
 C
 
 C ======================================================
-C             VARIABLES
+C                   VARIABLES
 C 
 C
       CHARACTER*25 OBUFF, NBUFF, OBUFF2
@@ -30,7 +30,7 @@ C     TRNS - ROTOR TURNOVERS
 C     REFS - REFLECTOR WIRINGS
 
 C ======================================================
-C             INTIALIZATION
+C                   INTIALIZATION
 C
 C
       ITER = 0
@@ -51,7 +51,7 @@ C           REFLECTOR WIRINGS
       REFS(3) = 'FVPJIAOYEDRZXWGCTKUQSBNMHL'
 
 C ======================================================
-C             SETTINGS
+C                   SETTINGS
 C
 C
       SROTS(1) = 1
@@ -59,7 +59,7 @@ C
       SROTS(3) = 3
 
 C ======================================================
-C             STARTUP SCREEN
+C                   STARTUP SCREEN
 C
 C
       WRITE(*,*) '---------------------------------------------------'
@@ -77,7 +77,7 @@ C
       GOTO 10
 
 C ======================================================
-C             MAIN
+C                   MAIN
 C
 C
 10    
@@ -106,7 +106,7 @@ C
       CLOSE(13)
       GOTO 99
 C ======================================================
-C             END
+C                   END
 C
 C
 99    
