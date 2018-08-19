@@ -1,8 +1,8 @@
         PROGRAM ENIGMA
 C ======================================================
 C       PROGRAM:  M3 / M4 ENGIMA MACHINE EMULATOR
-C       AUTHOR: 			BARRETT OTTE
-C       DATE:				08-12-2018
+C       AUTHOR:  BARRETT OTTE
+C       DATE: 08-12-2018
 C       DESCRIPTION:  
 C           - SIMULATE  ENGIMA MACHINE ENCRYPTION
 C           - SUPPORTS FILES UP TO 5242880 BYTES (5MB)
@@ -17,7 +17,7 @@ C
         CHARACTER ROTS(8)*26
         INTEGER NOTS(8, 2), TRNS(8, 2), SROTS(3)
         CHARACTER REFS(3)*26
-		
+
 C      OBUFF - ORIGINAL BUFFER         
 C      NBUFF - NEW BUFFER
 C      CC - CURRENT CHARACTER           
@@ -49,7 +49,7 @@ C                                  REFLECTOR WIRINGS
         REFS(1) = 'EJMZALYXVBWFCRQUONTSPIKHGD'
         REFS(2) = 'YRUHQSLDPXNGOKMIEBFZCWVJAT'
         REFS(3) = 'FVPJIAOYEDRZXWGCTKUQSBNMHL'
-		
+
 C ======================================================
 C                                             SETTINGS
 C
@@ -57,7 +57,7 @@ C
         SROTS(1) = 1
         SROTS(2) = 2
         SROTS(3) = 3
-		
+
 C ======================================================
 C                                         STARTUP SCREEN
 C
@@ -75,7 +75,7 @@ C
         WRITE(*,*) ' '
         
         GOTO 10
-		
+
 C ======================================================
 C                                                    MAIN
 C
@@ -88,19 +88,19 @@ C
         WRITE(*,*)
 
 11      FORMAT(A80)
-		
+
         DO IC = 1,25
-		    CC = OBUFF(IC:IC)
+            CC = OBUFF(IC:IC)
             DO IA = 0, 26
-			    IF(CC .EQ. ABCSL(IA:IA)) THEN
-				    WRITE(*,*) IC, '  :  ', CC,  '  IS A LOWERCASE LETTER.'
+                IF(CC .EQ. ABCSL(IA:IA)) THEN
+                   WRITE(*,*) IC, '  :  ', CC,  '  LOWERCASE'
                 ELSEIF(CC .EQ. ABCSU(IA:IA)) THEN
-				    WRITE(*,*) IC, '  :  ', CC,  '  IS AN UPPERCASE LETTER.'
+                  WRITE(*,*) IC, '  :  ', CC,  '  UPPERCASE'
                 ENDIF
             END DO
         END DO
-		
-		
+
+
         WRITE(*,*)
         WRITE(*,*) '>  ENCRYPTION WRITTEN TO [ENCRYPTED]'
         CLOSE(12)
@@ -114,12 +114,12 @@ C
         READ(*,*)
         STOP
         END
-		
-		
-		
-		
-		
-		
-		
-		
+
+
+
+
+
+
+
+
 
