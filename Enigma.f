@@ -2,7 +2,8 @@
       IMPLICIT NONE
 C
 C ====================================================================
-C                        HEADER
+C                       HEADER
+C
 C
 C  PROGRAM:     M3 / M4 ENGIMA MACHINE EMULATOR
 C  AUTHOR:      BARRETT OTTE
@@ -15,44 +16,52 @@ C    - INTRINSIC FUNCTIONS USED:  LEN, MOD
 C    - COMPILED ON UBUNTU USING GFORTRAN AND DEFAULT FLAGS.
 C    - INPUT IS READ FROM FILE NAMED @INPUT
 C    - ENCRYPTION IS OUTPUT TO FILE NAMED @OUTPUT
+C    - A LOT OF THE CODE LOOKS BAD, BUT HEY I DONT REALLY CARE.
 C
 C  LIMITATIONS:
-C    - FILE SIZES ONLY UP TO 999 LINES LONG AND X BYTES
+C    - USER IS EXPECTED TO CORRECTLY POPULATE PLUGBOARD (NO DUPS).
+C    - THE MAX FILE SIZE HAS NOT BEEN TESTED, BUT ITS PROBABLY SMALL.
 C
 C ====================================================================
 C                       VARIABLES
 C 
+C
 C  GENERAL
-      CHARACTER LBUFF*50, ABCU*26, ABCL*26, CC*1
-      CHARACTER RWS(8)*26, REFS(3)*26
-      CHARACTER NOTS(8, 2), TRNVS(8, 2)
-      INTEGER ROTCP
-      INTEGER STAT, NLS, LBL, IC, IDXL
-      INTEGER ROFFS(3), SRWS(3)
+      CHARACTER    LBUFF*75, CC, TMP
+      CHARACTER*26 ABCU, ABCL, PLGBRD
+      CHARACTER    RWS(8)*26, REFS(3)*26
+      CHARACTER    NOTS(8, 2), TRNVS(8, 2), CHKVLS(2)
+      INTEGER      SREF, STAT, LBL, IC, IR, CI
+      INTEGER      ROFFS(3), SRWS(3), NDSTRN(3)
 C  FUNCTIONS
-      INTEGER LENGTH, ISLTTR, CHIDX
-      CHARACTER TOUPR
+      INTEGER      LENGTH, CHIDX, ISLTTR
+      CHARACTER    TOUPR
 C     
 C ====================================================================                
-C                        VARIABLE DEFINITIONS        
+C                       VARIABLE DEFINITIONS        
+C
 C
 C  GENERAL    
-C       LBUFF  - LINE BUFFER   
-C       CC     - CURRENT CHARACTER           
-C       ABCU   - ARRAY OF THE UPPERCASE ALPHABET
-C       ABCL   - ARRAY OF THE LOWERCASE ALPHABET
-C       RWS    - ARRAY OF ROTOR WIRINGS
-C       NOTS   - ARRAY OF ROTOR NOTCHES
-C       TRNVS  - ARRAY OF ROTOR TURNOVERS
-C       SRWS   - ARRAY OF ROTOR WIRINGS SET
-C       REFS   - ARRAY OF REFLECTOR WIRINGS
-C       STAT   - FLAG TO CHECK IO STATUS
-C       NLS    - NUMBER OF LINES READ IN FILE
-C       LBL    - CURRENT LINE BUFFER LENGTH
+C       LBUFF  - LINE BUFFER
+C       CC     - CURRENT CHARACTER
+C       TMP    - TEMP VARIABLE FOR CALCULATION
+C       PLGBRD - WIRING OF KEYBOARD TO PLUGBOARD
+C       ABCU   - ALPHABET IN UPPERCASE
+C       ABCL   - ALPHABET IN LOWERCASE
+C       RWS    - WIRING OF ROTORS
+C       REFS   - WIRING OF REFLECTORS
+C       NOTS   - NOTCH POSITIONS
+C       TRNVS  - TURNOVER POSITIONS
+C       CHKVLS - TEMPS FOR CHECKING TURNOVER AND NOTCH POSITIONS
+C       SREF   - REFLECTOR SET IN CONFIGURATION
+C       STAT   - CHECK IF I/O ERROR OCCURRED OPENING FILES
+C       LBL    - LINE BUFFER LENGTH
 C       IC     - CHARACTER ITERATOR
-C       IDXL   - LETTER INDEX IN ALPHABET
-C       ROFFS  - ARRAY OF ROTOR OFFSETS
-C       ROTCP  - ROTATION CAP FOR ROTORS
+C       IR     - ROTOR ITERATOR
+C       CI     - CHARACTER INDEX
+C       ROFFS  - ROTOR OFFSETS
+C       SRWS   - ROTOR WIRINGS SET IN CONFIGURATION
+C       NDSTRN - TRACK IF ROTOR NEEDS TO TURNOVER
 C  FUNCTIONS
 C       LENGTH - RETURNS STRING LENGTH IGNORING TRAILING BLANKS
 C       ISLTTR - RETURNS 1 IF CHARACTER IS A LETTER, -1 IF NOT
@@ -63,7 +72,6 @@ C ====================================================================
 C                       INTIALIZATION
 C
 C
-      ROTCP = 26
       ABCU = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
       ABCL = 'abcdefghijklmnopqrstuvwxyz'
 C  ROTOR WIRINGS
@@ -81,10 +89,15 @@ C  REFLECTOR WIRINGS
       REFS(3) = 'FVPJIAOYEDRZXWGCTKUQSBNMHL'
 C  ROTOR NOTCHES
       NOTS(1,1) = 'Q'
+      NOTS(1,2) = '!'
       NOTS(2,1) = 'E'
+      NOTS(2,2) = '!'
       NOTS(3,1) = 'V'
+      NOTS(3,2) = '!'
       NOTS(4,1) = 'J'
+      NOTS(4,2) = '!'
       NOTS(5,1) = 'Z'
+      NOTS(5,2) = '!'
       NOTS(6,1) = 'Z'
       NOTS(6,2) = 'M'
       NOTS(7,1) = 'Z'
@@ -93,10 +106,15 @@ C  ROTOR NOTCHES
       NOTS(8,2) = 'M'
 C  ROTOR TURNOVERS
       TRNVS(1,1) = 'R'
+      TRNVS(1,2) = '!'
       TRNVS(2,1) = 'F'
+      TRNVS(2,2) = '!'
       TRNVS(3,1) = 'W'
+      TRNVS(3,2) = '!'
       TRNVS(4,1) = 'K'
+      TRNVS(4,2) = '!'
       TRNVS(5,1) = 'A'
+      TRNVS(5,2) = '!'
       TRNVS(6,1) = 'A'
       TRNVS(6,2) = 'N'
       TRNVS(7,1) = 'A'
@@ -105,18 +123,22 @@ C  ROTOR TURNOVERS
       TRNVS(8,2) = 'N' 
 C
 C ====================================================================
-C                        ENIGMA MACHINE CONFIGURATION
+C                       SET MACHINE CONFIGURATION
 C
 C
+C  SET PLUGBOARD, DO NOT SET DUPLICATE KEY-PAIRS
+      PLGBRD = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 C  SET ROTORS TO USE IN MACHINE LEFT=1, MID=2, RIGHT=3
       SRWS(1) = 1
       SRWS(2) = 2
       SRWS(3) = 3
 C  SET ROTOR'S POSITION OFFSET WHEN PLACED IN MACHINE
-      ROFFS(1) = 1
-      ROFFS(2) = 1
+      ROFFS(1) = 3
+      ROFFS(2) = 2
       ROFFS(3) = 1
-
+C  SET REFLECTOR TO BE USED IN MACHINE
+      SREF = 1
+C
 C ====================================================================
 C                       STARTUP SCREEN
 C
@@ -127,8 +149,8 @@ C
       PRINT *, '*               BARRETT OTTE   2018               *'
       PRINT *, '---------------------------------------------------'
       PRINT *,
-
       OPEN(UNIT=12, FILE='@INPUT', STATUS='OLD', IOSTAT=STAT)
+
       IF(STAT.NE.0) THEN
         PRINT *, '>  @INPUT DOES NOT EXIST OR COULD NOT BE OPENED.'
         GOTO 90
@@ -147,51 +169,87 @@ C
 C ====================================================================
 C                       MAIN
 C
+C
       PRINT *,'>  ENCRYPTING [MESSAGE].'
       PRINT *,
-
+      PRINT *, '---------------------------------------------------'
       DO
-        READ(12, '(A)', END=10) LBUFF
-        NLS = NLS + 1
+C  GET CHARACTER FROM KEYBOARD
+        READ(12,'(A)',END=10) LBUFF
         LBL = LENGTH(LBUFF)
-
-        WRITE(*, '(A50)') LBUFF
-C 1     FORMAT(A, I3, A)
-C       WRITE(*, 1)' > ', LBL, ' CHARACTERS LONG.'
-        
-        DO IC = 1,LBL
-
+        DO IC=1,LBL,1
+          PRINT *,
           CC = LBUFF(IC:IC)
-        
+          WRITE(*,*) '>  ORIGINAL  - ', CC
           IF(ISLTTR(CC, ABCU, ABCL).EQ.1) THEN
             CC = TOUPR(CC, ABCU, ABCL)
-            IDXL = CHIDX(CC, ABCU)
-            WRITE(*, '(A,A,A,I2)')' > ', CC, '  ', IDXL
-
-C           CYCLE FIRST ROTOR BEFORE PUSHING THROUGH
-            
+            CI = CHIDX(CC, ABCU)
+C  CYCLE FIRST ROTOR, CHECKING IF TURNOVER NEEDED
             ROFFS(1) = ROFFS(1) + 1
-            ROFFS(1) = MOD(ROFFS(1), ROTCP)
-            
-
-
-
-          ELSE
-C           WRITE IT TO FILE PLAIN - NO ENCRYPTION          
+            ROFFS(1) = MOD(ROFFS(1), 26) 
+            CHKVLS(1) = TRNVS(SRWS(1),1)
+            CHKVLS(2) = TRNVS(SRWS(1),2)
+            TMP = RWS(SRWS(1))(ROFFS(1):ROFFS(1))
+            IF(TMP.EQ.CHKVLS(1).OR.TMP.EQ.CHKVLS(2)) THEN
+              NDSTRN(1) = 1
+            ENDIF
+C  DOUBLE STEP MIDDLE ROTOR, CHECKING IF NOTCH ACTIVATED
+            CHKVLS(1) = NOTS(SRWS(2),1)
+            CHKVLS(2) = NOTS(SRWS(2),2)
+            TMP = RWS(SRWS(2))(ROFFS(2):ROFFS(2))
+            IF(TMP.EQ.CHKVLS(1).OR.TMP.EQ.CHKVLS(2)) THEN
+              ROFFS(2) = ROFFS(2) + 1
+              ROFFS(2) = MOD(ROFFS(2), 26)
+              CHKVLS(1) = TRNVS(SRWS(2),1)
+              CHKVLS(2) = TRNVS(SRWS(2),2)
+              TMP = RWS(SRWS(2))(ROFFS(2):ROFFS(2))
+              IF(TMP.EQ.CHKVLS(1).OR.TMP.EQ.CHKVLS(2)) THEN
+                NDSTRN(2) = 1
+              ENDIF
+            ENDIF
+C  STEP ROTOR 1 AND 2, CHECKING IF ANY TURNOVERS NEEDED
+            DO IR=1,2,1
+              CC = PLGBRD(ROFFS(IR):ROFFS(IR))
+              IF(NDSTRN(IR).EQ.1) THEN
+                NDSTRN(IR) = 0
+                ROFFS(IR+1) = ROFFS(IR+1) + 1
+                ROFFS(IR+1) = MOD(ROFFS(IR+1),26)
+                CHKVLS(1) = NOTS(SRWS(IR+1),1)
+                CHKVLS(2) = NOTS(SRWS(IR+1),2)
+                TMP = RWS(SRWS(IR+1))(ROFFS(IR+1):ROFFS(IR+1))
+                IF(TMP.EQ.CHKVLS(IR+1).OR.TMP.EQ.CHKVLS(IR+1)) THEN
+                  NDSTRN(IR+1) = 1
+                ENDIF
+              ENDIF
+            ENDDO
+C  PASS THROUGH ALL ROTORS FORWARD
+            DO IR=1,3,1
+              CI = MOD(CI + ROFFS(IR), 26)
+              CI = CHIDX(RWS(IR)(CI:CI), PLGBRD)
+              CI = MOD(26 + CI - ROFFS(IR), 26)
+            ENDDO
+C  PASS THROUGH REFLECTOR
+            CC = REFS(SREF)(CI:CI)
+            CI = CHIDX(CC,PLGBRD)
+C  PASS THROUGH ALL ROTORS BACKWARD
+            DO IR=3,1,-1
+              CI = MOD((CI + ROFFS(IR)), 26)
+              CI = CHIDX(ABCU(CI:CI), RWS(SRWS(IR)))
+              CI = MOD(26 + CI - ROFFS(IR), 26)
+            ENDDO
+            CC = ABCU(CI:CI)
           ENDIF
-
-
+          WRITE(*,*)'>  ENCRYPTED - ', CC
+          WRITE(13, '(A)', ADVANCE='NO') CC
         ENDDO
+        WRITE(13,*)
       ENDDO
-
 10    CONTINUE
       PRINT *,
-      WRITE(*, 11)' >  ', NLS, ' LINES READ.'
 11    FORMAT(A, I0.3, A)
-
+      PRINT *, '---------------------------------------------------'
       PRINT *,
-      PRINT *, '>  ENCRYPTION WRITTEN TO [ENCRYPTED].'
-      GOTO 90
+      PRINT *, '>  ENCRYPTION WRITTEN TO [OUTPUT].'
 C
 C ====================================================================
 C                        END
@@ -207,6 +265,7 @@ C
 C ====================================================================
 C                        LENGTH                    
 C     
+C
 C  RETURNS LENGTH OF STRING IGNORING TRAILING BLANKSPACES
 C
       INTEGER FUNCTION LENGTH(STR)
@@ -222,12 +281,13 @@ C
 C ====================================================================
 C                        ISLTTR                    
 C     
+C
 C  RETURNS 1 IF CHARACTER IS A LETTER, -1 IF NOT
 C
       INTEGER FUNCTION ISLTTR(CH, ABCU, ABCL)
         CHARACTER*1  CH
         CHARACTER*26 ABCU, ABCL
-
+        INTEGER I
         DO I = 1, 26
           IF(CH.EQ.ABCU(I:I).OR.CH.EQ.ABCL(I:I)) THEN
             ISLTTR = 1
@@ -241,12 +301,13 @@ C
 C ====================================================================
 C                        TOUPR
 C
+C
 C  RETURNS LETTER AS UPPERCASE
 C
       CHARACTER FUNCTION TOUPR(L, ABCU, ABCL)
         CHARACTER*(*) L
         CHARACTER*26 ABCU, ABCL
-
+        INTEGER I
         DO I = 1, 26
           IF(L.EQ.ABCL(I:I)) THEN
             TOUPR = ABCU(I:I)
@@ -260,11 +321,13 @@ C
 C ====================================================================
 C                        CHIDX
 C
+C
 C  RETURNS INDEX OF CHARACTER IN STRING, -1 IF NOT FOUND
 C
       INTEGER FUNCTION CHIDX(CH, STR)
         CHARACTER*(*) CH
         CHARACTER*(*) STR
+        INTEGER I
         CHIDX = -1
         DO 200, I = LEN(STR), 1, -1
           IF(CH.EQ.STR(I:I)) GOTO 210
