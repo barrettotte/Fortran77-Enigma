@@ -14,7 +14,7 @@ best that I could. Such as column number limit and variable naming up to 6 chara
  * The max file size has not been tested, but its probably pretty small.
 
 
-## Very Good Diagram of Enigma Machine
+## Diagram of Enigma Machine
 ![enigma](http://enigma.louisedade.co.uk/wiringdiagram.png)
 
 From http://enigma.louisedade.co.uk/howitworks.html
